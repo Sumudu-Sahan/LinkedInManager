@@ -55,7 +55,7 @@ LinkedInRequestManager linkedInRequestManager = new LinkedInRequestManager(Activ
 
 CLIENT ID, CLIENT SECRET and REDIRECTION URL is available at LinkedIn Developer Console.
 When Providing the Redirection URL, Please add that in this format. (Without the / after the domain)
-Ex :- https:www.example.com
+Ex :- https://www.example.com
 
 ### Step : 5 - invoke the showAuthenticateView() with a mode to start the sign in process
 ```
