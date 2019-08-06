@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">LinkedInLibrary</string>
+
+    <string name="login_button_text">Sign in With LinkedIn</string>
+</resources>
