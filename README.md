@@ -1,7 +1,7 @@
 # LinkedInManager
 Android Library to Authenticate with LinkedIn
 
-# What is LinkedInManager
+## What is LinkedInManager
 LinkedInManager is an android library which can be used to implement LinkedIn Sign in for any android application.
 
 ```
@@ -24,9 +24,9 @@ onGetEmailAddressFailed() - Failed situation when trying to get the profile data
 
 
 
-# Implementation
+## Implementation
 
-Step : 1 - Add the JitPack repository to your project root build.gradle file
+### Step : 1 - Add the JitPack repository to your project root build.gradle file
 ```
 allprojects {
 	repositories {
@@ -36,40 +36,40 @@ allprojects {
 }
 ```
 
-# Step : 2- Add the dependency
+### Step : 2- Add the dependency
 ```
 dependencies {
         implementation 'com.github.Sumudu-Sahan:LinkedInManager:V1.0'
 }
 ```
 
-# Step : 3 - Inherit your activity from linkedInManagerResponse
+### Step : 3 - Inherit your activity from linkedInManagerResponse
 ```
 public class MainActivity extends AppCompatActivity implements LinkedInManagerResponse{}
 ```
 
-# Step : 4 - Create a LinkedInRequestManager instance and initialize it.
+### Step : 4 - Create a LinkedInRequestManager instance and initialize it.
 ```
 LinkedInRequestManager linkedInRequestManager = new LinkedInRequestManager(Activity, LinkedInManagerResponse, "CLIENT ID", "CLIENT SECRET", "REDIRECTION URL");
 ```
 
-CLIENT ID, CLIENT SECRET and REDIRECTION URL is available at LinkedIn Developer Console
+CLIENT ID, CLIENT SECRET and REDIRECTION URL is available at LinkedIn Developer Console.
 When Providing the Redirection URL, Please add that in this format. (Without the / after the domain)
 Ex :- https:www.example.com
 
-# Step : 5 - invoke the showAuthenticateView() with a mode to start the sign in process
+### Step : 5 - invoke the showAuthenticateView() with a mode to start the sign in process
 ```
 linkedInRequestManager.showAuthenticateView(mode);
 ```
 
-# Available modes
+### Available modes
 ```
 LinkedInRequestManager.MODE_EMAIL_ADDRESS_ONLY - will return only the email address
 LinkedInRequestManager.MODE_LITE_PROFILE_ONLY - will return only the profile data
 LinkedInRequestManager.MODE_BOTH_OPTIONS - will return both email address and profile data
 ```
 
-# To get the user's First name, last name and profile ID, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
+## To get the user's First name, last name and profile ID, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
 ```
 @Override
     public void onGetProfileDataSuccess(LinkedInUserProfile linkedInUserProfile) {
@@ -80,7 +80,7 @@ LinkedInRequestManager.MODE_BOTH_OPTIONS - will return both email address and pr
     }
     
 ```
-# To get the user's email address, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
+## To get the user's email address, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
 ```
 @Override
     public void onGetEmailAddressSuccess(LinkedInEmailAddress linkedInEmailAddress) {
@@ -89,7 +89,7 @@ LinkedInRequestManager.MODE_BOTH_OPTIONS - will return both email address and pr
 		
 ```
 # OPTIONAL 
-If you need to get the User's Access token, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
+## If you need to get the User's Access token, use the following overrided method in your activity which is inherited from LinkedInManagerResponse
 ```
 @Override
 public void onGetAccessTokenSuccess(LinkedInAccessToken linkedInAccessToken) {
@@ -97,7 +97,7 @@ public void onGetAccessTokenSuccess(LinkedInAccessToken linkedInAccessToken) {
 }
 ```
 
-If you need to get the User's authorization code, user the following overrided method in your activity which is inherited from LinkedInManagerResponse
+## If you need to get the User's authorization code, user the following overrided method in your activity which is inherited from LinkedInManagerResponse
 ```
 @Override
     public void onGetCodeSuccess(String code) {
