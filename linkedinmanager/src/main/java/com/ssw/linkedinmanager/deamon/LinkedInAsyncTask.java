@@ -57,7 +57,7 @@ public class LinkedInAsyncTask extends AsyncTask<Void, Void, String> {
 
             bufferedReader = new BufferedReader(new InputStreamReader(urlConn.getInputStream()));
 
-            StringBuffer stringBuffer = new StringBuffer();
+            StringBuilder stringBuffer = new StringBuilder();
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 stringBuffer.append(line);

@@ -2,13 +2,11 @@ package com.ssw.linkedinmanager.ui;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.util.Log;
 import android.view.Window;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.ssw.linkedinmanager.R;
@@ -62,11 +60,10 @@ public class LinkedInRequestManager {
         this.redirectionURL = redirectionURL;
     }
 
-    public void dismissAuthenticateView(){
-        try{
+    public void dismissAuthenticateView() {
+        try {
             dialog.dismiss();
-        }
-        catch (Exception ignored){
+        } catch (Exception ignored) {
 
         }
     }
@@ -76,6 +73,7 @@ public class LinkedInRequestManager {
         String URL = URL_FOR_AUTHORIZATION_CODE + "?response_type=code&client_id=" + clientID + "&redirect_uri=" + redirectionURL + "&state=aRandomString&scope=";
         switch (mode) {
             case MODE_EMAIL_ADDRESS_ONLY:
+            default:
                 URL += SCOPE_EMAIL_ADDRESS;
                 break;
 
@@ -86,10 +84,6 @@ public class LinkedInRequestManager {
             case MODE_BOTH_OPTIONS:
                 URL += SCOPE_LITE_PROFILE + "," + SCOPE_EMAIL_ADDRESS;
                 break;
-
-            default:
-                URL += SCOPE_EMAIL_ADDRESS;
-                break;
         }
 
         dialog = new Dialog(activity);
@@ -99,19 +93,19 @@ public class LinkedInRequestManager {
         Window window = dialog.getWindow();
         window.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
 
-        final WebView webView = dialog.findViewById(R.id.webView);
-        WebSettings settings = webView.getSettings();
+        final WebView linkedInWebView = dialog.findViewById(R.id.linkedInWebView);
+        WebSettings settings = linkedInWebView.getSettings();
         try {
             settings.setAllowFileAccess(false);
         } catch (Exception ignored) {
         }
-        webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
+        linkedInWebView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         try {
-            webView.getSettings().setAllowFileAccess(false);
+            linkedInWebView.getSettings().setAllowFileAccess(false);
         } catch (Exception ignored) {
         }
 
-        webView.setWebViewClient(new WebViewClient() {
+        linkedInWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url.startsWith(redirectionURL + "/?code")) {
@@ -126,7 +120,7 @@ public class LinkedInRequestManager {
                 }
             }
         });
-        webView.loadUrl(URL);
+        linkedInWebView.loadUrl(URL);
         dialog.show();
     }
 
@@ -220,6 +214,7 @@ public class LinkedInRequestManager {
     private LinkedInUser getRelevantData(LinkedInAccessToken linkedInAccessToken) {
         switch (mode) {
             case MODE_EMAIL_ADDRESS_ONLY:
+            default:
                 linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
                 break;
 
@@ -230,10 +225,6 @@ public class LinkedInRequestManager {
             case MODE_BOTH_OPTIONS:
                 linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
                 linkedInUser.setUserProfile(getLinkedInProfileData(linkedInAccessToken));
-                break;
-
-            default:
-                linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
                 break;
         }
 
