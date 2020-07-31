@@ -23,9 +23,9 @@ onGetEmailAddressFailed() - Failed situation when trying to get the profile data
 ```
 
 ## V1.01.00 Added Features
-### logout function
-### check if the user is logged in or not option
-### check the user logged mode
+* logout function
+* check if the user is logged in or not option
+* check the user logged mode
 
 
 ## Implementation
