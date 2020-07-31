@@ -10,20 +10,29 @@ import android.widget.LinearLayout;
 
 import com.google.gson.Gson;
 import com.ssw.linkedinmanager.R;
+import com.ssw.linkedinmanager.common.CommonInfo;
+import com.ssw.linkedinmanager.common.ExceptionManager;
+import com.ssw.linkedinmanager.common.ObjectSerializer;
+import com.ssw.linkedinmanager.common.PreferenceManager;
 import com.ssw.linkedinmanager.control.LinkedInControl;
 import com.ssw.linkedinmanager.dto.LinkedInAccessToken;
 import com.ssw.linkedinmanager.dto.LinkedInEmailAddress;
+import com.ssw.linkedinmanager.dto.LinkedInLoggedTokenBean;
 import com.ssw.linkedinmanager.dto.LinkedInNameBean;
 import com.ssw.linkedinmanager.dto.LinkedInUser;
 import com.ssw.linkedinmanager.dto.LinkedInUserProfile;
 import com.ssw.linkedinmanager.events.LinkedInAccessTokenResponse;
+import com.ssw.linkedinmanager.events.LinkedInAccessTokenValidationResponse;
 import com.ssw.linkedinmanager.events.LinkedInEmailAddressResponse;
 import com.ssw.linkedinmanager.events.LinkedInManagerResponse;
 import com.ssw.linkedinmanager.events.LinkedInProfileDataResponse;
+import com.ssw.linkedinmanager.events.LinkedInUserLoginDetailsResponse;
+import com.ssw.linkedinmanager.events.LinkedInUserLoginValidationResponse;
 
 import org.json.JSONObject;
 
 import static com.ssw.linkedinmanager.common.URLManager.URL_FOR_ACCESS_TOKEN;
+import static com.ssw.linkedinmanager.common.URLManager.URL_FOR_ACCESS_TOKEN_VALIDATION;
 import static com.ssw.linkedinmanager.common.URLManager.URL_FOR_AUTHORIZATION_CODE;
 import static com.ssw.linkedinmanager.common.URLManager.URL_FOR_EMAIL_ADDRESS;
 import static com.ssw.linkedinmanager.common.URLManager.URL_FOR_PROFILE_DATA;
@@ -51,44 +60,137 @@ public class LinkedInRequestManager {
 
     private int mode;
 
-    public LinkedInRequestManager(Activity activity, LinkedInManagerResponse linkedInManagerResponse, String clientID, String clientSecret, String redirectionURL) {
+    private boolean allowCancelDialogPrompt;
+
+    public LinkedInRequestManager(Activity activity, LinkedInManagerResponse linkedInManagerResponse, String clientID, String clientSecret, String redirectionURL, boolean allowCancelDialogPrompt) {
         this.activity = activity;
         this.linkedInManagerResponse = linkedInManagerResponse;
 
         this.clientID = clientID;
         this.clientSecret = clientSecret;
         this.redirectionURL = redirectionURL;
+        this.allowCancelDialogPrompt = allowCancelDialogPrompt;
     }
 
     public void dismissAuthenticateView() {
         try {
             dialog.dismiss();
-        } catch (Exception ignored) {
-
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
         }
     }
 
     public void showAuthenticateView(int mode) {
         this.mode = mode;
-        String URL = URL_FOR_AUTHORIZATION_CODE + "?response_type=code&client_id=" + clientID + "&redirect_uri=" + redirectionURL + "&state=aRandomString&scope=";
-        switch (mode) {
-            case MODE_EMAIL_ADDRESS_ONLY:
-            default:
-                URL += SCOPE_EMAIL_ADDRESS;
-                break;
+        try {
+            LinkedInLoggedTokenBean linkedInLoggedTokenBean = (LinkedInLoggedTokenBean) ObjectSerializer.deserialize(PreferenceManager.getInstance(activity.getApplicationContext()).getString(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN, ""));
+            if (linkedInLoggedTokenBean.isLoggedIn() && linkedInLoggedTokenBean.getRequestMode() == mode) {
+                isValidToken(linkedInLoggedTokenBean.getLinkedInAccessToken(), mode);
+            } else {
+                if (PreferenceManager.getInstance(activity.getApplicationContext()).removePreferenceKey(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN)) {
+                    startAuthenticate(mode);
+                }
+            }
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
+            if (PreferenceManager.getInstance(activity.getApplicationContext()).removePreferenceKey(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN)) {
+                startAuthenticate(mode);
+            }
+        }
+    }
 
+    public boolean logout() {
+        return PreferenceManager.getInstance(activity.getApplicationContext()).removePreferenceKey(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN);
+    }
+
+    public void isLoggedIn(final LinkedInUserLoginValidationResponse linkedInUserLoginValidationResponse) {
+        try {
+            LinkedInLoggedTokenBean linkedInLoggedTokenBean = (LinkedInLoggedTokenBean) ObjectSerializer.deserialize(PreferenceManager.getInstance(activity.getApplicationContext()).getString(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN, ""));
+            if (linkedInLoggedTokenBean.isLoggedIn() && linkedInLoggedTokenBean.getRequestMode() == mode) {
+                new LinkedInControl().checkAccessTokenValidity(URL_FOR_ACCESS_TOKEN_VALIDATION, "client_id=" + clientID + "&client_secret=" + clientSecret + "&token=" + linkedInLoggedTokenBean.getLinkedInAccessToken(), new LinkedInAccessTokenValidationResponse() {
+                    @Override
+                    public void onValidationSuccess() {
+                        linkedInUserLoginValidationResponse.activeLogin();
+                    }
+
+                    @Override
+                    public void onValidationFailed() {
+                        linkedInUserLoginValidationResponse.tokenExpired();
+                    }
+                });
+            } else {
+                logout();
+                linkedInUserLoginValidationResponse.notLogged();
+            }
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
+            logout();
+            linkedInUserLoginValidationResponse.notLogged();
+        }
+    }
+
+    public void getLoggedRequestedMode(final LinkedInUserLoginDetailsResponse linkedInUserLoginDetailsResponse) {
+        try {
+            final LinkedInLoggedTokenBean linkedInLoggedTokenBean = (LinkedInLoggedTokenBean) ObjectSerializer.deserialize(PreferenceManager.getInstance(activity.getApplicationContext()).getString(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN, ""));
+            if (linkedInLoggedTokenBean.isLoggedIn()) {
+                new LinkedInControl().checkAccessTokenValidity(URL_FOR_ACCESS_TOKEN_VALIDATION, "client_id=" + clientID + "&client_secret=" + clientSecret + "&token=" + linkedInLoggedTokenBean.getLinkedInAccessToken(), new LinkedInAccessTokenValidationResponse() {
+                    @Override
+                    public void onValidationSuccess() {
+                        linkedInUserLoginDetailsResponse.loggedMode(linkedInLoggedTokenBean.getRequestMode());
+                    }
+
+                    @Override
+                    public void onValidationFailed() {
+                        linkedInUserLoginDetailsResponse.tokenExpired();
+                    }
+                });
+            } else {
+                logout();
+                linkedInUserLoginDetailsResponse.notLogged();
+            }
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
+            logout();
+            linkedInUserLoginDetailsResponse.notLogged();
+        }
+    }
+
+    private void isValidToken(final String accessToken, final int mode) {
+        new LinkedInControl().checkAccessTokenValidity(URL_FOR_ACCESS_TOKEN_VALIDATION, "client_id=" + clientID + "&client_secret=" + clientSecret + "&token=" + accessToken, new LinkedInAccessTokenValidationResponse() {
+            @Override
+            public void onValidationSuccess() {
+                LinkedInAccessToken linkedInAccessToken = new LinkedInAccessToken();
+                linkedInAccessToken.setAccess_token(accessToken);
+                getRelevantData(linkedInAccessToken);
+            }
+
+            @Override
+            public void onValidationFailed() {
+                startAuthenticate(mode);
+            }
+        });
+    }
+
+    private void startAuthenticate(int mode) {
+        String url = URL_FOR_AUTHORIZATION_CODE + "?response_type=code&client_id=" + clientID + "&redirect_uri=" + redirectionURL + "&state=aRandomString&scope=";
+        switch (mode) {
             case MODE_LITE_PROFILE_ONLY:
-                URL += SCOPE_LITE_PROFILE;
+                url += SCOPE_LITE_PROFILE;
                 break;
 
             case MODE_BOTH_OPTIONS:
-                URL += SCOPE_LITE_PROFILE + "," + SCOPE_EMAIL_ADDRESS;
+                url += SCOPE_LITE_PROFILE + "," + SCOPE_EMAIL_ADDRESS;
+                break;
+
+            case MODE_EMAIL_ADDRESS_ONLY:
+            default:
+                url += SCOPE_EMAIL_ADDRESS;
                 break;
         }
 
         dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setCancelable(false);
+        dialog.setCancelable(allowCancelDialogPrompt);
         dialog.setContentView(R.layout.linkedin_popup_layout);
         Window window = dialog.getWindow();
         window.setLayout(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -97,12 +199,14 @@ public class LinkedInRequestManager {
         WebSettings settings = linkedInWebView.getSettings();
         try {
             settings.setAllowFileAccess(false);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
         }
         linkedInWebView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         try {
             linkedInWebView.getSettings().setAllowFileAccess(false);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            ExceptionManager.exceptionLog(e);
         }
 
         linkedInWebView.setWebViewClient(new WebViewClient() {
@@ -120,7 +224,7 @@ public class LinkedInRequestManager {
                 }
             }
         });
-        linkedInWebView.loadUrl(URL);
+        linkedInWebView.loadUrl(url);
         dialog.show();
     }
 
@@ -148,7 +252,7 @@ public class LinkedInRequestManager {
         });
     }
 
-    private LinkedInUserProfile getLinkedInProfileData(LinkedInAccessToken linkedInAccessToken) {
+    private LinkedInUserProfile getLinkedInProfileData(final LinkedInAccessToken linkedInAccessToken) {
         new LinkedInControl().getProfileData(URL_FOR_PROFILE_DATA + linkedInAccessToken.getAccess_token(), new LinkedInProfileDataResponse() {
             @Override
             public void onRequestSuccess(JSONObject jsonObject) {
@@ -166,12 +270,19 @@ public class LinkedInRequestManager {
                                 .getJSONObject(0)
                                 .getString("identifier");
                         linkedInUserProfile.setImageURL(imageURL);
-                    } catch (Exception ignored) {
+                    } catch (Exception e) {
+                        ExceptionManager.exceptionLog(e);
                         linkedInUserProfile.setImageURL("");
                     }
-                    linkedInManagerResponse.onGetProfileDataSuccess(linkedInUserProfile);
 
-                } catch (Exception ignored) {
+                    try {
+                        PreferenceManager.getInstance(activity.getApplicationContext()).putString(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN, ObjectSerializer.serialize(new LinkedInLoggedTokenBean(true, mode, linkedInAccessToken.getAccess_token())));
+                    } catch (Exception e) {
+                        ExceptionManager.exceptionLog(e);
+                    }
+                    linkedInManagerResponse.onGetProfileDataSuccess(linkedInUserProfile);
+                } catch (Exception e) {
+                    ExceptionManager.exceptionLog(e);
                     linkedInManagerResponse.onGetProfileDataFailed();
                 }
             }
@@ -184,7 +295,7 @@ public class LinkedInRequestManager {
         return linkedInUserProfile;
     }
 
-    private LinkedInEmailAddress getLinkedInEmailAddress(LinkedInAccessToken linkedInAccessToken) {
+    private LinkedInEmailAddress getLinkedInEmailAddress(final LinkedInAccessToken linkedInAccessToken) {
         new LinkedInControl().getEmailAddress(URL_FOR_EMAIL_ADDRESS + linkedInAccessToken.getAccess_token(), new LinkedInEmailAddressResponse() {
             @Override
             public void onSuccessResponse(JSONObject jsonObject) {
@@ -195,9 +306,15 @@ public class LinkedInRequestManager {
                             .getJSONObject("handle~")
                             .getString("emailAddress");
 
+                    try {
+                        PreferenceManager.getInstance(activity.getApplicationContext()).putString(CommonInfo.STRING_COMMON_PREFERENCE, CommonInfo.STRING_ACCESS_TOKEN, ObjectSerializer.serialize(new LinkedInLoggedTokenBean(true, mode, linkedInAccessToken.getAccess_token())));
+                    } catch (Exception e) {
+                        ExceptionManager.exceptionLog(e);
+                    }
                     linkedInEmailAddress.setEmailAddress(emailAddress);
                     linkedInManagerResponse.onGetEmailAddressSuccess(linkedInEmailAddress);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    ExceptionManager.exceptionLog(e);
                     linkedInEmailAddress.setEmailAddress("");
                     linkedInManagerResponse.onGetEmailAddressFailed();
                 }
@@ -213,11 +330,6 @@ public class LinkedInRequestManager {
 
     private LinkedInUser getRelevantData(LinkedInAccessToken linkedInAccessToken) {
         switch (mode) {
-            case MODE_EMAIL_ADDRESS_ONLY:
-            default:
-                linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
-                break;
-
             case MODE_LITE_PROFILE_ONLY:
                 linkedInUser.setUserProfile(getLinkedInProfileData(linkedInAccessToken));
                 break;
@@ -225,6 +337,11 @@ public class LinkedInRequestManager {
             case MODE_BOTH_OPTIONS:
                 linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
                 linkedInUser.setUserProfile(getLinkedInProfileData(linkedInAccessToken));
+                break;
+
+            case MODE_EMAIL_ADDRESS_ONLY:
+            default:
+                linkedInUser.setLinkedInEmailAddress(getLinkedInEmailAddress(linkedInAccessToken));
                 break;
         }
 

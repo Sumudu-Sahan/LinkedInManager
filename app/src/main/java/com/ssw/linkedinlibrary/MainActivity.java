@@ -15,10 +15,11 @@ import com.ssw.linkedinmanager.dto.LinkedInAccessToken;
 import com.ssw.linkedinmanager.dto.LinkedInEmailAddress;
 import com.ssw.linkedinmanager.dto.LinkedInUserProfile;
 import com.ssw.linkedinmanager.events.LinkedInManagerResponse;
+import com.ssw.linkedinmanager.events.LinkedInUserLoginDetailsResponse;
+import com.ssw.linkedinmanager.events.LinkedInUserLoginValidationResponse;
 import com.ssw.linkedinmanager.ui.LinkedInRequestManager;
 
 public class MainActivity extends AppCompatActivity implements LinkedInManagerResponse {
-    private static final String TAG = "MainActivity";
 
     private Context context;
     private Activity activity;
@@ -43,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements LinkedInManagerRe
 
         //Client ID and Client Secret is in the LinkedIn Developer Console
         //provide Redirection URL which is available in developer console. This URL is available in LinkedIn Developer Console
-        linkedInRequestManager = new LinkedInRequestManager(activity, this, "YOUR CLIENT ID HERE", "YOUR CLIENT SECRET HERE", "REDIRECTION URL HERE");
+        linkedInRequestManager = new LinkedInRequestManager(activity, this, "81e7uqgktjdm8y", "9Df1njfD4h7sOyrM", "https://frimi.lk", true);
 
         initComponents();
     }
@@ -60,10 +61,76 @@ public class MainActivity extends AppCompatActivity implements LinkedInManagerRe
         btnSignInWithLinkedIn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                linkedInRequestManager.showAuthenticateView(LinkedInRequestManager.MODE_BOTH_OPTIONS);
+                startLinkedInSignIn();
             }
         });
     }
+
+    private void startLinkedInSignIn() {
+        linkedInRequestManager.showAuthenticateView(LinkedInRequestManager.MODE_BOTH_OPTIONS);
+
+        //LinkedInRequestManager.MODE_BOTH_OPTIONS - can get email and user profile data with user profile image
+        //LinkedInRequestManager.MODE_EMAIL_ADDRESS_ONLY - can get only the user profile email address
+        //LinkedInRequestManager.MODE_LITE_PROFILE_ONLY - can get the user profile details with profile image
+    }
+
+    private void closeAuthenticationView() {
+        linkedInRequestManager.dismissAuthenticateView();
+    }
+
+    private void isUserLoggedIn() {
+        linkedInRequestManager.isLoggedIn(new LinkedInUserLoginValidationResponse() {
+            @Override
+            public void activeLogin() {
+                //Session token is active. can use to get data from linkedin
+            }
+
+            @Override
+            public void tokenExpired() {
+                //token has been expired. need to obtain a new code
+            }
+
+            @Override
+            public void notLogged() {
+                //user is not logged into the application
+            }
+        });
+    }
+
+    private void logout() {
+        //logout the user
+        linkedInRequestManager.logout();
+    }
+
+    private void checkUserLoggedPermissions() {
+        linkedInRequestManager.getLoggedRequestedMode(new LinkedInUserLoginDetailsResponse() {
+            @Override
+            public void loggedMode(int mode) {
+                //user is already logged in. active token. mode is available
+                switch (mode) {
+                    case LinkedInRequestManager.MODE_LITE_PROFILE_ONLY:
+                        break;
+
+                    case LinkedInRequestManager.MODE_EMAIL_ADDRESS_ONLY:
+                        break;
+
+                    case LinkedInRequestManager.MODE_BOTH_OPTIONS:
+                        break;
+                }
+            }
+
+            @Override
+            public void tokenExpired() {
+                //token has been expired. need to obtain a new code
+            }
+
+            @Override
+            public void notLogged() {
+                //user is not logged into the application
+            }
+        });
+    }
+
 
     @Override
     public void onBackPressed() {
