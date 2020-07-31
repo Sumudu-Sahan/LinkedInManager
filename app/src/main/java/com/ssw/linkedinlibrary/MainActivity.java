@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements LinkedInManagerRe
 
         //Client ID and Client Secret is in the LinkedIn Developer Console
         //provide Redirection URL which is available in developer console. This URL is available in LinkedIn Developer Console
-        linkedInRequestManager = new LinkedInRequestManager(activity, this, "81e7uqgktjdm8y", "9Df1njfD4h7sOyrM", "https://frimi.lk", true);
+        linkedInRequestManager = new LinkedInRequestManager(activity, this, "YOUR CLIENT ID", "YOUR CLIENT SECRET", "REDIRECTION URL", true);
 
         initComponents();
     }
