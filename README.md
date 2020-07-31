@@ -22,6 +22,10 @@ onGetEmailAddressSuccess(LinkedInEmailAddress linkedInEmailAddress) - will retur
 onGetEmailAddressFailed() - Failed situation when trying to get the profile data
 ```
 
+## V1.01.00 Added Features
+### logout function
+### check if the user is logged in or not option
+### check the user logged mode
 
 
 ## Implementation
@@ -39,7 +43,7 @@ allprojects {
 ### Step : 2- Add the dependency
 ```
 dependencies {
-        implementation 'com.github.Sumudu-Sahan:LinkedInManager:1.00.02'
+        implementation 'com.github.Sumudu-Sahan:LinkedInManager:1.01.00'
 }
 ```
 
@@ -50,10 +54,10 @@ public class MainActivity extends AppCompatActivity implements LinkedInManagerRe
 
 ### Step : 4 - Create a LinkedInRequestManager instance and initialize it.
 ```
-LinkedInRequestManager linkedInRequestManager = new LinkedInRequestManager(Activity, LinkedInManagerResponse, "CLIENT ID", "CLIENT SECRET", "REDIRECTION URL");
+LinkedInRequestManager linkedInRequestManager = new LinkedInRequestManager(Activity, LinkedInManagerResponse, "CLIENT ID", "CLIENT SECRET", "REDIRECTION URL", allowCancelDialogPrompt);
 ```
 
-CLIENT ID, CLIENT SECRET and REDIRECTION URL is available at LinkedIn Developer Console.
+CLIENT ID, CLIENT SECRET and REDIRECTION URL is available at LinkedIn Developer Console. variable allowCancelDialogPrompt is a boolean
 
 ### Step : 5 - invoke the showAuthenticateView() with a mode to start the sign in process
 ```
@@ -101,6 +105,66 @@ public void onGetAccessTokenSuccess(LinkedInAccessToken linkedInAccessToken) {
     public void onGetCodeSuccess(String code) {
 
     }
+```
+
+## If you need to check whether the user is already logged in or not, use the following code segment inside your activity.
+```
+linkedInRequestManager.isLoggedIn(new LinkedInUserLoginValidationResponse() {
+            @Override
+            public void activeLogin() {
+                //Session token is active. can use to get data from linkedin
+            }
+
+            @Override
+            public void tokenExpired() {
+                //token has been expired. need to obtain a new code
+            }
+
+            @Override
+            public void notLogged() {
+                //user is not logged into the application
+            }
+        });
+```
+
+## If you need to check whether the user is already logged in and logged mode, user the following code segment inside your activity.
+```
+linkedInRequestManager.getLoggedRequestedMode(new LinkedInUserLoginDetailsResponse() {
+            @Override
+            public void loggedMode(int mode) {
+                //user is already logged in. active token. mode is available
+                switch (mode) {
+                    case LinkedInRequestManager.MODE_LITE_PROFILE_ONLY:
+                        break;
+
+                    case LinkedInRequestManager.MODE_EMAIL_ADDRESS_ONLY:
+                        break;
+
+                    case LinkedInRequestManager.MODE_BOTH_OPTIONS:
+                        break;
+                }
+            }
+
+            @Override
+            public void tokenExpired() {
+                //token has been expired. need to obtain a new code
+            }
+
+            @Override
+            public void notLogged() {
+                //user is not logged into the application
+            }
+        });
+```
+
+## To close authentication dialog manually, use below code line.
+```
+linkedInRequestManager.dismissAuthenticateView();
+```
+
+## To logout the user manually, use below code line.
+```
+linkedInRequestManager.logout();
 ```
 
 That's it. 
